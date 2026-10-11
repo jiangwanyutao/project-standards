@@ -15,7 +15,8 @@
 - TypeScript 开启 `strict: true`。
 - 代码检查用 ESLint，写出必须启用的插件：TypeScript 规则、框架规则、无障碍规则。
 - 格式化用 Prettier，写出关键配置：引号、分号、行宽 100。
-- 写出一条质量门禁命令（lint、类型检查、测试、构建），合并前必须在本地跑通，任何一项失败就不允许合并。
+- 写出一条质量门禁命令（lint、类型检查、测试、构建、依赖漏洞扫描），合并前必须在本地跑通，任何一项失败就不允许合并。漏洞扫描用 `pnpm audit --prod --audit-level high`，只检查生产依赖，发现高危及以上漏洞时失败。
+- 框架和各依赖的版本只写在技术选型规范里，本文不重复写版本号。
 
 按技术确定：
 - 包管理（空项目推荐 pnpm）；Windows 上用 pnpm 时推荐 `.npmrc` 里 `node-linker=hoisted`，避免符号链接目录读取失败。
@@ -23,7 +24,7 @@
 - 路由和服务端状态：React 用 React Router + TanStack Query；Vue 用 Vue Router + TanStack Query（`@tanstack/vue-query`）。代码里已经用 Pinia/Redux 存服务端数据的，沿用并问用户是否以后改用 TanStack Query。
 - ESLint 插件：React 用 `@typescript-eslint`、`eslint-plugin-react-hooks`、`eslint-plugin-jsx-a11y`；Vue 用 `typescript-eslint`、`eslint-plugin-vue`、`eslint-plugin-vuejs-accessibility`。
 - 接口类型生成工具（`openapi-typescript`）和命令名（`gen:api`）。
-- 门禁命令按 `package.json` 里真实存在的脚本写；缺的脚本列为"需要新增的配置"。
+- 门禁命令按 `package.json` 里真实存在的脚本写；缺的脚本列为"需要新增的配置"。空项目推荐 `pnpm lint && pnpm typecheck && pnpm test --run && pnpm build && pnpm audit --prod --audit-level high`；包管理工具是 npm 或 yarn 时换成 `npm audit --omit=dev --audit-level=high`、`yarn npm audit --environment production --severity high`。
 
 ## 2. 目录
 
@@ -145,10 +146,11 @@ src/
   - 附加认证信息（token）；
   - 拆开后端统一响应：成功码时返回 `data`，否则抛出带错误码、消息、`detail` 的 `ApiError`；
   - 遇到 401 跳转登录页。
+- token 存放：access token 只存在内存里（`api/client.ts` 模块内的变量），页面刷新后用 refresh token 换取新的 access token；refresh token 在后端下发的 `HttpOnly` Cookie 里，前端读不到也不处理。**禁止**把 token 写进 `localStorage`、`sessionStorage`、URL 或日志。认证方式与后端规范的安全一章一致。
 - 页面和组件**禁止**直接调用 `fetch` 或 axios，只能通过 `queries/` 里的 hooks 获取数据。
 - 错误提示统一交给服务端状态库的全局错误回调，用 toast 显示 `message`；页面只处理需要特殊交互的错误码（例如状态冲突时刷新详情）。
 
-按技术确定：底层用 `fetch` 还是 axios（看依赖）；认证方式（Bearer token、Cookie）；统一响应结构和成功码按后端规范；toast 组件（组件库自带的 `ElMessage`、shadcn 的 sonner）。
+按技术确定：底层用 `fetch` 还是 axios（看依赖）；认证方式和 token 存放位置（按后端规范安全一章；后端用服务端会话时改为"会话 Cookie 由后端设置 `HttpOnly`，前端不读写"；代码里已经把 token 存在 `localStorage` 的，列给用户确认是否改）；统一响应结构和成功码按后端规范；toast 组件（组件库自带的 `ElMessage`、shadcn 的 sonner）。
 
 ## 8. 测试
 

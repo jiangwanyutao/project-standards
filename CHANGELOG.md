@@ -1,5 +1,46 @@
 # 改动说明
 
+## 0.4.0
+
+### 新增 skill
+
+- `tech-stack-standard`：生成 `docs/standards/tech-stack.md`，选型总表（层、选择、版本、选择理由、依据）、引入与升级依赖、选择依据三章。版本号只写在这份文件里，后端、数据库、前端规范的标题不再带版本号；本次不生成技术选型规范时，版本仍写在各规范标题里。
+- `workflow-standard`：生成 `docs/standards/workflow.md`，分支、提交说明、合并请求、合并前检查、版本号与 CHANGELOG 五章。提交说明格式只写在这份文件里，上手文档第 4 节和 CLAUDE.md 的工作约定改为引用它。
+- `init-standards` 生成整套规范时先生成技术选型规范，在 UI 规范之后生成开发流程规范；识别结果新增"开发流程"一行，交叉检查新增认证方式与 token 存放位置、接口文档地址、版本号和提交说明格式只写在一处三项。
+
+### 现有规范补充
+
+- 后端规范新增第 8 章"安全"：token 有效期、退出登录作废 refresh token、登录限流、密码哈希、接口层统一权限校验、按归属过滤数据、CORS、文件上传、依赖漏洞处理、机密信息不进仓库。
+- 后端规范第 4 章新增配置项（命名、写进 `.env.example`、缺少必填配置时启动失败）、健康检查接口 `GET /health`、日志级别用法；监控指标和告警写占位 `<待补充>`。
+- 后端规范第 5 章新增接口文档：由代码生成 OpenAPI 3 并写明地址，每个接口写用途和错误码，生产环境的调试页面关闭或要求登录。
+- 后端、前端质量门禁的最后一项改为依赖漏洞扫描（`dependency-check`、`govulncheck`、`pip-audit`、`pnpm audit`）。
+- 前端规范请求层新增 token 存放位置：access token 存内存，refresh token 在 `HttpOnly` Cookie 里，禁止写进 `localStorage`、`sessionStorage`。
+- 上手文档新增"环境与部署"一节，工具表的版本改为引用技术选型规范。
+- 代码托管平台加入第 2 类问题（`git remote -v` 能看出来时不问）；健康检查、漏洞扫描、密码哈希等安全基线直接写进规范，不提问。
+
+### 规则来源
+
+来源只记在这里，不写进生成的规范文档。
+
+| 规则 | 来源 |
+|---|---|
+| 密码用 Argon2id 或 bcrypt | https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html |
+| 登录失败锁定、改密码后作废会话 | https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html ；https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html |
+| token 不放 `localStorage`，Cookie 用 `HttpOnly`、`Secure`、`SameSite` | https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html ；https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html |
+| 权限默认拒绝、在服务端校验 | https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html |
+| 携带凭证时不能用 `*` 作为允许的来源 | https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS |
+| 上传文件的大小、扩展名白名单、内容类型、服务端生成文件名 | https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html |
+| 漏洞扫描工具 | https://owasp.org/www-project-dependency-check/ ；https://go.dev/doc/security/vuln/ ；https://github.com/pypa/pip-audit ；https://pnpm.io/cli/audit |
+| 配置从环境变量读取 | https://12factor.net/config |
+| 健康检查接口 | https://learn.microsoft.com/en-us/azure/architecture/patterns/health-endpoint-monitoring |
+| 日志级别、日志里不写机密信息 | https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html |
+| 提交说明 `<type>: <描述>`、不兼容改动加 `!` | https://www.conventionalcommits.org/zh-hans/v1.0.0/ |
+| 合并请求小而独立、评审看什么、建议类意见的标注 | https://google.github.io/eng-practices/review/ |
+| 版本号规则 | https://semver.org/lang/zh-CN/ |
+| CHANGELOG 按版本倒序、按类型分组、"未发布"一节 | https://keepachangelog.com/zh-CN/1.1.0/ |
+
+未采纳：GitFlow 的 develop、release 分支（默认用主分支加短期功能分支）；按提交说明自动生成 CHANGELOG（要额外配工具，作为团队后续选择）。
+
 ## 0.3.0
 
 - 插件以代码规范（数据库、后端、前端、CLAUDE.md）为主，UI 规范改为只生成骨架：原则、主题切换机制、设计变量和状态色的变量名及所在文件、布局要点。颜色、字号、间距、圆角、阴影、布局尺寸一律写占位 `<待补充>`，删掉默认的靛紫色等具体取值。用户给了品牌色时只填进主色并报告对比度，不再推导整套颜色。

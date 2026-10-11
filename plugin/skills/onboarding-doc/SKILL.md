@@ -9,4 +9,6 @@ description: 为项目生成给开发者看的规范上手文档 docs/standards/
 2. 读 `docs/standards/` 下所有已有的规范文件，每份提取：管什么、最重要的 3 到 5 条硬性规则、质量门禁命令。还没有规范文件时，先告诉用户建议先生成规范（`init-standards`），用户坚持时只写环境和流程部分。
 3. 读本 skill 的 `references/template.md`，按模板输出 `docs/standards/README.md`。
 4. 环境和命令只从这些地方取：项目 README、`package.json` 的 scripts、`Makefile`、`docker-compose*.yml`、`.env.example`、构建文件、CI 配置（`.github/workflows/`、`.gitlab-ci.yml`、`Jenkinsfile`）。取不到的命令写进汇报，问用户，**禁止**按框架惯例编一条。
-5. 提交说明格式看 `git log --oneline -30`：历史提交已经有统一格式的照写；没有统一格式时用默认 `<type>: <中文描述>`（type 取 feat、fix、refactor、docs、test、chore、perf、ci），并在汇报里说明。
+5. 提交说明格式、分支规则、合并方式只写在开发流程规范 `workflow.md` 里，本文第 4 节引用它，不重复写；还没有 `workflow.md` 时，建议用户先生成（`workflow-standard`）。
+6. 工具版本只写在技术选型规范 `tech-stack.md` 里，本文第 3 节引用它；还没有 `tech-stack.md` 时，在工具表里加"版本"一列，从依赖文件读取。
+7. 第 6 节的部署方式是只能由用户提供的取值，用户没给时写占位 `<部署方式>`，并在汇报里列为需要补充的取值；环境列表只写用户给出的或项目配置里能找到的环境。

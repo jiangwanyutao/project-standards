@@ -8,7 +8,7 @@
     {
       "name": "project-standards",
       "source": "./plugin",
-      "description": "为项目生成后端、前端、数据库、UI 规范，以及开发者上手文档和 CLAUDE.md"
+      "description": "为项目生成技术选型、开发流程、后端、前端、数据库、UI 规范，以及开发者上手文档和 CLAUDE.md"
     }
   ]
 }

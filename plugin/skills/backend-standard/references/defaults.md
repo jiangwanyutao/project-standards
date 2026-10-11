@@ -12,11 +12,12 @@
 默认规则：
 - 选一份语言公认的风格指南做基线，写明"本文没有写到的，一律以基线为准"，并附官方链接。
   - Python：PEP 8 + PEP 484 类型注解；Java：Google Java Style Guide；Go：Effective Go + `gofmt`；TypeScript/Node.js：TypeScript 官方手册 + 项目 ESLint 配置；C#：.NET 官方编码约定。
-- 格式化、lint、类型检查、测试覆盖率各由一个工具强制执行，写出工具名和关键配置（例如行宽）。
-- 写出一条质量门禁命令，合并前必须在本地跑通，任何一项失败就不允许合并。
+- 格式化、lint、类型检查、测试覆盖率、依赖漏洞扫描各由一个工具强制执行，写出工具名和关键配置（例如行宽）。
+- 写出一条质量门禁命令，合并前必须在本地跑通，任何一项失败就不允许合并。门禁的最后一项是依赖漏洞扫描，发现已知漏洞时失败；工具能按严重程度过滤的，只在高危及以上时失败。
 - 依赖用固定的一种工具管理，锁文件必须提交；**禁止**用其他方式安装项目依赖。
+- 语言和框架的版本只写在技术选型规范里，本文写"版本见技术选型规范"，不重复写版本号。
 
-按技术确定：语言版本、框架版本、格式化工具（Java：Spotless + google-java-format；Go：gofmt/goimports；Python：ruff format）、lint 工具（Java：Checkstyle 或 PMD；Go：golangci-lint；Python：ruff check）、类型检查（Python：mypy --strict；TS：tsc --noEmit）、行宽（100）、依赖管理工具（Java：Maven 或 Gradle，看已有文件；Python：uv；Node.js：pnpm）、门禁命令。
+按技术确定：格式化工具（Java：Spotless + google-java-format；Go：gofmt/goimports；Python：ruff format）、lint 工具（Java：Checkstyle 或 PMD；Go：golangci-lint；Python：ruff check）、类型检查（Python：mypy --strict；TS：tsc --noEmit）、行宽（100）、依赖管理工具（Java：Maven 或 Gradle，看已有文件；Python：uv；Node.js：pnpm）、依赖漏洞扫描（Java：OWASP Dependency-Check 的 Maven 或 Gradle 插件，`failBuildOnCVSS` 设为 7；Go：`govulncheck ./...`；Python：`pip-audit`，用 uv 时作为开发依赖、执行 `uv run pip-audit`；Node.js：`pnpm audit --prod --audit-level high`）、门禁命令。
 
 ## 2. 命名
 
@@ -51,7 +52,19 @@
 - **必须**：函数的参数和返回值写完整类型（静态类型语言天然满足时省略本条）。
 - **必须**：框架是异步模型时，I/O 全部异步；**禁止**在异步函数里调用同步 I/O，确实需要时放到线程池执行。
 - **必须**：配置从环境变量或配置中心读取，**禁止**在代码里硬编码地址、密钥、账号。
+- 配置项：
+  - 环境变量名用 UPPER_SNAKE_CASE，同一个外部服务的配置用同一个前缀，例如 `DB_HOST`、`DB_PORT`。
+  - **必须**：新增配置项时同时写进 `.env.example`，每项上面一行注释写明用途；密码、密钥类的值留空。
+  - **必须**：启动时校验必填配置，缺少或格式不对时打印缺少的配置项名并退出，**禁止**用默认值继续运行。密码、密钥类配置**禁止**有默认值。
+- 健康检查：**必须**提供 `GET /health`，不需要认证、不加接口版本前缀，能正常处理请求并且数据库连得上时返回 200，否则返回 503；供部署平台和负载均衡探测，响应里**禁止**包含版本号、配置等内部信息。
 - **必须**：日志用统一的日志库，输出结构化字段；**禁止**用打印语句代替日志（命令行工具的输出除外）；**禁止**在日志里写密码、token、API Key。
+- 日志级别：
+  - `error`：需要有人处理的失败，例如未预期的异常、外部服务重试后仍然失败、后台任务最终失败。带上请求 ID 和异常堆栈。
+  - `warn`：没有造成失败、但需要关注的情况，例如外部服务调用重试、触发限流、登录连续失败。
+  - `info`：服务启动和停止、后台任务开始和结束、重要的业务状态变化。
+  - `debug`：排查问题用的细节，生产环境默认关闭。
+  - **禁止**：调用方造成的错误（参数校验失败、没有权限、资源不存在，即 4xx）记成 `error`，这类最多记 `info`。
+- 监控指标和告警：`<待补充>`。
 - **禁止**：捕获异常后不处理就继续运行。捕获后要么转换成业务异常抛出，要么记录日志后重新抛出。
 - **禁止**：在模块加载时产生副作用（例如加载时连接数据库）；语言有可变默认参数问题的（Python），禁止可变默认参数。
 - **必须**：函数不超过 50 行，文件不超过 400 行，嵌套不超过 3 层，超过的要拆分。有条件的话用自动测试或 lint 规则拦截。
@@ -82,7 +95,7 @@
   - **必须**：进程注册 `unhandledRejection` 和 `uncaughtException` 处理，记录日志后退出进程，由进程管理器重启。
   - **必须**：只抛出 `Error` 或其子类；请求体用 schema 校验（zod、JSON Schema），并在中间件里限制请求体大小。
 
-按技术确定：异步模型（Spring MVC 是同步模型，本条按"不在请求线程里做长耗时操作"改写）、配置库（Spring `@ConfigurationProperties`、pydantic-settings、viper）、日志库（SLF4J + Logback、logging、zap/slog）、后台任务机制（空项目直接用任务表 + worker）。
+按技术确定：异步模型（Spring MVC 是同步模型，本条按"不在请求线程里做长耗时操作"改写）、配置库（Spring `@ConfigurationProperties` 加 `@Validated`、pydantic-settings、viper 或 `envconfig`）、日志库（SLF4J + Logback、logging、zap/slog）、健康检查的实现（Spring：Actuator 只暴露 `health`，地址写成 `/actuator/health`，本条的 `/health` 相应改写；其他框架自己写一个路由）、后台任务机制（空项目直接用任务表 + worker）。
 
 ## 5. RESTful 约定
 
@@ -114,8 +127,13 @@
 - **禁止**：任何查询接口返回密码、密钥、token 等机密字段，响应模型里不定义这些字段。
 - 创建订单、支付等重复提交会造成损失的接口，支持 `Idempotency-Key` 请求头：同一个键 24 小时内重复请求时，直接返回第一次的响应，不再执行。
 - 每个请求都有请求 ID：请求头带了 `X-Request-ID` 就沿用，没带就生成一个；写进响应头和这次请求的所有日志。
+- 接口文档：
+  - **必须**：后端由代码生成 OpenAPI 文档（框架支持时用 OpenAPI 3），写明文档地址和接口调试页面的地址；前端的接口类型（`gen:api`）从这个地址生成，**禁止**另外手写一份接口文档。
+  - **必须**：每个接口写明用途（一句话）、可能返回的业务错误码；列表接口写明默认排序。
+  - 请求和响应模型的每个字段写说明，枚举字段列出全部取值。
+  - 生产环境的接口调试页面关闭或要求登录后才能访问。
 
-按技术确定：JSON 字段大小写（空项目推荐 snake_case，与数据库字段一致；代码里已经统一用 camelCase 的沿用 camelCase，分页参数相应写成 `pageSize`）；版本前缀（代码里已有统一前缀的沿用）。
+按技术确定：OpenAPI 生成方式和地址（Spring：springdoc-openapi，`/v3/api-docs`、`/swagger-ui.html`；FastAPI：自带，`/openapi.json`、`/docs`；Gin：swaggo/swag 按注释生成，`/swagger/doc.json`、`/swagger/index.html`，生成的是 Swagger 2.0，规范里注明格式，前端用它生成类型时先转换成 OpenAPI 3；NestJS：`@nestjs/swagger`）；JSON 字段大小写（空项目推荐 snake_case，与数据库字段一致；代码里已经统一用 camelCase 的沿用 camelCase，分页参数相应写成 `pageSize`）；版本前缀（代码里已有统一前缀的沿用）。
 
 ## 6. 统一响应
 
@@ -134,7 +152,7 @@
   | 10003 | 403 | 没有权限 |
   | 10004 | 404 | 资源不存在，或已被删除 |
   | 10005 | 409 | 数据冲突，例如违反唯一约束 |
-  | 10006 | 429 | 请求过于频繁（项目有限流时才登记） |
+  | 10006 | 429 | 请求过于频繁（有登录接口或其他限流时登记） |
   | 50000 | 500 | 服务器内部错误。`message` 固定为"服务器内部错误"，`detail` 为空，详细信息只写日志 |
 
 - 业务错误码从 20001 起按业务域分段，在表里登记。新增错误码时，同时登记到代码里的错误码枚举和本表。
@@ -154,21 +172,45 @@
 
 按技术确定：测试框架（Java：JUnit 5 + Mockito + Testcontainers；Go：testing + testify；Python：pytest + httpx；Node.js：Vitest 或 Jest）、覆盖率工具（JaCoCo、`go test -cover`、pytest-cov）、测试库名（见数据库规范的库名规则）、Java 方法名风格（`cancelOrder_rejectsPaidOrder` 或 `@DisplayName`，代码里已有的沿用）。
 
-## 示例：Python 3.12 + FastAPI 项目的完整写法
+## 8. 安全
+
+每项只写一两条规则，项目里没有的能力（例如没有登录、没有文件上传）对应条目不写。
+
+默认规则：
+- 认证：
+  - access token 有效期不超过 2 小时；需要保持登录时用 refresh token，有效期不超过 7 天，由后端以 `HttpOnly`、`Secure`、`SameSite=Strict` 的 Cookie 下发。
+  - **必须**：退出登录、修改密码、管理员禁用账号后，该用户已签发的 refresh token 全部作废。
+  - 登录接口按账号和来源 IP 限流，连续失败 5 次后锁定 15 分钟，返回 10006。
+- 密码存储：**必须**用 Argon2id 或 bcrypt 哈希后存储；**禁止**明文存储、可逆加密，以及直接用 MD5、SHA-1、SHA-256 计算哈希。
+- 权限校验：
+  - **必须**：在接口层统一校验（拦截器、中间件或依赖注入），每个接口声明它需要的权限；没有声明的接口默认拒绝访问，公开接口显式标注。
+  - **禁止**：只靠前端隐藏按钮或菜单控制权限。
+  - 按记录归属控制的数据（例如只能看自己的订单），在业务层查询时加上归属条件，**禁止**先查出来再在接口层过滤。
+- CORS：只允许配置项里列出的来源；**禁止**在允许携带凭证（Cookie）时把来源设为 `*`，生产环境**禁止**使用 `*`。
+- 文件上传（项目有上传功能时才写）：
+  - **必须**：限制单个文件大小，按扩展名白名单校验，同时检查文件内容的类型和扩展名一致。
+  - **必须**：存储用的文件名由服务端生成，**禁止**用用户上传的文件名拼接存储路径。
+- 依赖漏洞：质量门禁里的漏洞扫描报出漏洞时，先升级到修复版本；暂时没有修复版本的，在扫描工具的忽略配置里登记漏洞编号、原因和复查日期。
+- 机密信息：**禁止**把密码、密钥、token 提交进仓库，`.env` 加入 `.gitignore`；不小心提交过的，立即更换该密钥，只删提交不算处理完。
+
+按技术确定：认证方式（空项目推荐上面的 access token + refresh token；代码里已经用服务端会话的沿用会话，改写成会话过期和退出登录作废会话的规则）、密码哈希库（Spring Security 的 `Argon2PasswordEncoder` 或 `BCryptPasswordEncoder`；Python 的 `argon2-cffi` 或 `pwdlib`；Go 的 `golang.org/x/crypto/argon2` 或 `bcrypt`；Node.js 的 `argon2`）、权限校验的实现方式（Spring：`@PreAuthorize`；FastAPI：`Depends`；Gin：中间件）、漏洞扫描工具的忽略配置（Dependency-Check 用 suppression 文件，`pip-audit` 用 `--ignore-vuln`，`pnpm audit` 用 `package.json` 的 `pnpm.auditConfig.ignoreCves`；`govulncheck` 没有忽略配置，改为在本章用表格登记漏洞编号、原因和复查日期）。
+
+## 示例：Python + FastAPI 项目的完整写法
 
 下面的内容只用来参照详细程度和措辞。目标项目是 Python + FastAPI 时，可以直接按它组织，但目录、命令、错误码必须换成目标项目真实的内容。
 
 ````markdown
-# 后端编码规范（Python 3.12 + FastAPI）
+# 后端编码规范（Python + FastAPI）
 
 ## 1. 基线
 
-- **基线**：PEP 8（https://peps.python.org/pep-0008/）加 PEP 484 类型注解（https://peps.python.org/pep-0484/）。本文没有写到的，一律以 PEP 8 为准。
+- **基线**：PEP 8（https://peps.python.org/pep-0008/）加 PEP 484 类型注解（https://peps.python.org/pep-0484/）。本文没有写到的，一律以 PEP 8 为准。Python 和各依赖的版本见技术选型规范。
 - **工具强制**：
   - `ruff check` 和 `ruff format` 负责风格与 lint，行宽 100。
   - `mypy --strict` 负责类型检查。
   - `pytest --cov` 负责测试和覆盖率。
-  - 合并前必须在 `backend/` 下本地跑通质量门禁：`uv run ruff format --check . && uv run ruff check . && uv run mypy app tests && uv run pytest --cov`，任何一项失败就不允许合并。
+  - `pip-audit` 负责依赖漏洞扫描，发现已知漏洞时失败。
+  - 合并前必须在 `backend/` 下本地跑通质量门禁：`uv run ruff format --check . && uv run ruff check . && uv run mypy app tests && uv run pytest --cov && uv run pip-audit`，任何一项失败就不允许合并。
 - 依赖用 uv 管理：`uv add` / `uv sync`，锁文件 `uv.lock` 必须提交。**禁止**使用 `pip install` 装项目依赖。
 
 ## 2. 命名
@@ -231,9 +273,10 @@ backend/
 - **必须**：函数不超过 50 行，文件不超过 400 行，嵌套不超过 3 层，超过的要拆分。
 - **必须**：魔法数字和字符串一律定义成常量或 `StrEnum`。枚举值集中放在 `app/core/enums.py`，与数据库的 `CHECK` 约束保持一致。
 - **禁止**：后台任务直接使用 `asyncio.create_task`，一律写入任务表，由 worker 执行。
+（配置项、健康检查、日志级别按上文第 4 节的默认规则展开）
 
 ## 5. RESTful 约定
-（按上文第 5 节的默认规则展开，路径示例用本项目的资源）
+（按上文第 5 节的默认规则展开，路径示例用本项目的资源；接口文档地址写 `/openapi.json` 和 `/docs`）
 
 ## 6. 统一响应
 （按上文第 6 节的默认规则展开，示例数据和业务错误码用本项目的业务）
@@ -244,4 +287,7 @@ backend/
 - 用例按"准备 → 执行 → 断言"三段组织，每条用例只验证一个行为。
 - 单元测试放在 `tests/unit/`，不连数据库。集成测试放在 `tests/integration/`，连 `<项目>_test` 库，接口用 `httpx.AsyncClient` 调用。
 - 覆盖率不低于 80%。状态机、防重复规则、权限校验这类逻辑必须有测试。
+
+## 8. 安全
+（按上文第 8 节的默认规则展开，密码哈希写 `pwdlib` 的 Argon2id，权限校验写成 `Depends`）
 ````

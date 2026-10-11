@@ -3,17 +3,19 @@
 <p align="center">
   <a href="https://github.com/jiangwanyutao/project-standards"><img src="https://img.shields.io/badge/Project%20Page-GitHub-blue" alt="Project Page"></a>
   <a href="https://docs.claude.com/en/docs/claude-code/skills"><img src="https://img.shields.io/badge/Claude%20Code-Skill-D97757" alt="Claude Code Skill"></a>
-  <a href="plugin/.claude-plugin/plugin.json"><img src="https://img.shields.io/badge/Version-0.3.0-orange" alt="Version"></a>
+  <a href="plugin/.claude-plugin/plugin.json"><img src="https://img.shields.io/badge/Version-0.4.0-orange" alt="Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green" alt="License"></a>
   <a href="https://github.com/jiangwanyutao/project-standards/stargazers"><img src="https://img.shields.io/github/stars/jiangwanyutao/project-standards?style=flat" alt="Stars"></a>
 </p>
 
-project-standards 是一个 **Claude Code 插件**：说一句"生成项目规范"，它先**读项目的依赖文件和现有代码**，识别使用的技术和已有写法（空项目就按你给的技术选型），再生成**后端、数据库、前端、UI 规范**，外加给开发者看的**上手文档**和给 AI 看的 **CLAUDE.md**。生成的是基础骨架，团队之后可以在这个基础上逐步补充。
+project-standards 是一个 **Claude Code 插件**：说一句"生成项目规范"，它先**读项目的依赖文件和现有代码**，识别使用的技术和已有写法（空项目就按你给的技术选型），再生成**技术选型、开发流程、后端、数据库、前端、UI 规范**，外加给开发者看的**上手文档**和给 AI 看的 **CLAUDE.md**。生成的是基础骨架，团队之后可以在这个基础上逐步补充。
 
 ### ✨ 核心特性
 
 - 🔍 **按项目定规则** — 先用对话里你明确说的，再用代码里已经统一的写法，最后才用默认规则，并按目标技术改写（Java/Spring、Go、Python、Node.js；React、Vue；PostgreSQL、MySQL 等）
-- 🧩 **一套完整的规范** — 一句话生成 `docs/standards/` 下的后端、数据库、前端、UI 规范和上手文档，以及根目录的 `CLAUDE.md`；也可以只生成其中几份
+- 🧩 **一套完整的规范** — 一句话生成 `docs/standards/` 下的技术选型、开发流程、后端、数据库、前端、UI 规范和上手文档，以及根目录的 `CLAUDE.md`；也可以只生成其中几份
+- 📌 **每件事只写一处** — 版本号只在技术选型规范，提交说明格式只在开发流程规范，其他文件引用它们
+- 🔒 **安全基线默认就有** — 密码哈希、token 有效期、接口层权限校验、CORS、依赖漏洞扫描写进后端规范，漏洞扫描进质量门禁
 - 🙋 **少提问** — 只问会明显改变规则的选择和只能由你提供的取值，合计不超过 8 个；其余直接用推荐值，汇报里逐项列出
 - 🛡️ **不编造** — 命令、路径、配置文件必须在项目里真实存在，没有的列为"需要新增的配置"，不写成已经在用
 - 🔗 **多份规范互相一致** — 生成后交叉检查 JSON 字段大小写、统一响应结构、分页参数、枚举写法和质量门禁命令
@@ -22,6 +24,7 @@ project-standards 是一个 **Claude Code 插件**：说一句"生成项目规�
 
 ### 最新动态
 
+* **[2026.10]** 🧭 新增技术选型规范和开发流程规范两个 skill；后端规范新增安全一章，补充配置项、健康检查、日志级别、接口文档；质量门禁加入依赖漏洞扫描（0.4.0）
 * **[2026.10]** 🎨 UI 规范改为只生成骨架，主题色等取值写成 `<待补充>` 占位；主题切换、响应式改为默认就有，不再询问（0.3.0）
 * **[2026.10]** 🙋 提问收紧到合计不超过 8 个，汇报里新增"使用的推荐值"一节（0.2.0）
 * **[2026.10]** 📚 后端、数据库、前端、CLAUDE.md 补充了一批可检查的规则，例如空集合返回 `[]`、PostgreSQL 在线建索引用 `CONCURRENTLY`、React 不用 `useEffect` 同步派生状态（0.2.0）
@@ -95,7 +98,7 @@ claude plugin install project-standards@project-standards
 ```text
 写了哪些文件
 - docs/standards/database.md：数据库设计规范，共 12 章
-- docs/standards/backend.md：后端编码规范，共 7 章
+- docs/standards/backend.md：后端编码规范，共 8 章
 - CLAUDE.md：49 行，用 @ 引用两份规范
 
 使用的推荐值
@@ -119,7 +122,9 @@ claude plugin install project-standards@project-standards
 | Skill | 生成的文件 | 触发说法示例 |
 |---|---|---|
 | `init-standards` | 下面全部文件，一次识别技术、一次提问，最后做交叉检查 | 生成项目规范、初始化规范、给项目定规矩 |
-| `backend-standard` | `docs/standards/backend.md` | 生成后端规范 |
+| `tech-stack-standard` | `docs/standards/tech-stack.md`（每一层用了什么、版本、理由；引入和升级依赖的规则） | 生成技术选型规范 |
+| `workflow-standard` | `docs/standards/workflow.md`（分支、提交说明、合并请求、合并前检查、版本号与 CHANGELOG） | 生成开发流程规范、定分支规则 |
+| `backend-standard` | `docs/standards/backend.md`（含安全、配置、健康检查、日志级别、接口文档） | 生成后端规范 |
 | `database-standard` | `docs/standards/database.md` | 生成数据库规范 |
 | `frontend-standard` | `docs/standards/frontend.md` | 生成前端规范 |
 | `ui-standard` | `docs/standards/ui.md`（骨架：原则、主题切换、变量名和占位，取值由团队后续补充） | 生成 UI 规范、设计规范 |
@@ -141,9 +146,11 @@ flowchart TD
     D --> E
     E --> F{还有必须问的问题吗}
     F -- 有 --> G[一次列出，合计不超过 8 个，每个附推荐值]
-    F -- 没有 --> H[依次生成数据库、后端、前端、UI 规范]
-    G --> H
-    H --> I[生成上手文档和 CLAUDE.md]
+    F -- 没有 --> T[生成技术选型规范]
+    G --> T
+    T --> H[依次生成数据库、后端、前端、UI 规范]
+    H --> W[生成开发流程规范]
+    W --> I[生成上手文档和 CLAUDE.md]
     I --> J[交叉检查多份规范是否一致，核对命令和路径是否存在]
     J --> K[汇报：写了哪些文件、使用的推荐值、需要新增的配置、需要补充的取值]
 ```
@@ -154,7 +161,7 @@ flowchart TD
 2. 目标项目代码里已经统一使用的写法；
 3. 各 skill `references/defaults.md` 里的默认规则，按目标项目的技术改写。
 
-**只问两类问题**：会明显改变规则的选择（例如 JSON 字段用 snake_case 还是 camelCase、界面类型、代码里写法不统一时以哪种为准），以及只能由你提供的取值（项目名、业务域、部署方式和备份位置）。你说了"不用问"时不提问，缺的取值在规范里写占位。
+**只问两类问题**：会明显改变规则的选择（例如 JSON 字段用 snake_case 还是 camelCase、界面类型、代码里写法不统一时以哪种为准），以及只能由你提供的取值（项目名、业务域、部署方式和备份位置、代码托管平台）。你说了"不用问"时不提问，缺的取值在规范里写占位。
 
 **仓库结构**：
 
@@ -174,19 +181,19 @@ flowchart TD
 <details>
 <summary><b>带插件与不带插件的对比（点击展开）</b></summary>
 
-测试方法：3 个空项目，请求里给出技术选型并说明"不用问"，分别在带插件和不带插件的情况下各运行一次，用脚本检查生成的规范（文件是否齐全、章节结构、按技术改写是否正确、多份规范是否一致、问题数等，每个用例 25～29 项）。版本 0.3.0（go 用例为 0.2.0，两版只在 UI 部分有差别，该用例没有前端）。
+测试方法：3 个空项目，请求里给出技术选型并说明"不用问"，分别在带插件和不带插件的情况下各运行一次，用脚本检查生成的规范（文件是否齐全、章节结构、按技术改写是否正确、多份规范是否一致、安全和开发流程规则、版本号和提交说明是否只写一处、问题数等，每个用例 35～48 项）。版本 0.4.0。
 
 | 用例 | 技术 | 带插件 | 不带插件 |
 |---|---|---|---|
-| java-vue-full | Java 17 + Spring Boot 3 + MyBatis-Plus + MySQL 8，Vue 3 + Element Plus | 29/29，0 个问题 | 12/29，19 个问题 |
-| go-backend-only | Go 1.22 + Gin + GORM + PostgreSQL 16，无前端 | 25/25，0 个问题 | 13/25，0 个问题 |
-| python-react-full | Python 3.12 + FastAPI + PostgreSQL，React 19 + shadcn/ui | 29/29，0 个问题 | 10/29，1 个问题 |
+| java-vue-full | Java 17 + Spring Boot 3 + MyBatis-Plus + MySQL 8，Vue 3 + Element Plus | 48/48，0 个问题 | 17/48，12 个问题 |
+| go-backend-only | Go 1.22 + Gin + GORM + PostgreSQL 16，无前端 | 35/35，0 个问题 | 17/35，0 个问题 |
+| python-react-full | Python 3.12 + FastAPI + PostgreSQL，React 19 + shadcn/ui | 48/48，0 个问题 | 12/48，1 个问题 |
 
 | 指标 | 带插件 | 不带插件 |
 |---|---|---|
-| 平均通过率 | 100% | 42% |
-| 平均用时 | 384 秒 | 251 秒 |
-| 平均 token | 134335 | 82051 |
+| 平均通过率 | 100% | 36% |
+| 平均用时 | 488 秒 | 303 秒 |
+| 平均 token | 153551 | 87550 |
 
 </details>
 
@@ -198,7 +205,7 @@ flowchart TD
 - 空项目生成的规范里，命令和配置文件（如 `pom.xml`、`.golangci.yml`、`package.json` 的 scripts）在项目里还不存在，要按汇报里的"需要新增的配置"建好后才能运行。
 - UI 规范只是骨架：主题色、字号、间距、布局尺寸都是 `<待补充>`，需要团队自己补充。
 - 默认规则按"后台管理"类 Web 项目整理，面向用户的站点和移动端只会改写布局一章，其他细节需要团队补充。
-- 带插件生成比不带插件多用约一半的时间和 token，主要花在逐个生成和最后的交叉检查上。
+- 带插件生成比不带插件多用六到七成的时间和 token，主要花在逐个生成和最后的交叉检查上。
 - 只适用于 Claude Code。
 
 ---
