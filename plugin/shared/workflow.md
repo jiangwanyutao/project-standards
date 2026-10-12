@@ -21,7 +21,7 @@
 - 已有文档：`CLAUDE.md`、`AGENTS.md`、`README*`、`CONTRIBUTING*`、`docs/` 下的文档。
 - 提交历史和仓库：`git log --oneline -30` 看提交说明的格式，`git branch -a` 看主分支名，`git remote -v` 看代码托管平台；CI 配置（`.github/workflows/`、`.gitlab-ci.yml`、`Jenkinsfile`）看 CI 里跑了哪些命令。
 
-识别出的技术和版本写进技术选型规范 `docs/standards/tech-stack.md`，其他规范只写技术名，不重复写版本号。本次不生成技术选型规范、项目里也没有时，版本写在各规范的标题里。
+识别出的技术和版本写进技术选型规范 `docs/standards/tech-stack.md`，其他规范只写技术名，不重复写版本号。本次不生成技术选型规范、项目里也没有时，版本写在后端、数据库、前端规范的标题里；UI 设计规范的标题不写版本。
 
 **提问**：只问下面两类问题，一次列给用户，每个问题附推荐值：
 

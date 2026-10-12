@@ -14,7 +14,7 @@ CLAUDE.md 每次对话都会被加载，所以只写 AI 每次都需要知道的
 - 后端：@docs/standards/backend.md
 - 数据库：@docs/standards/database.md
 - 前端：@docs/standards/frontend.md
-- UI 设计：@docs/standards/ui.md
+- UI 设计：@docs/standards/<design.md，沿用已有 ui.md 时写 ui.md>
 - 开发者上手：`docs/standards/README.md`（给人看的环境和流程说明，不需要每次加载）
 
 ## 目录

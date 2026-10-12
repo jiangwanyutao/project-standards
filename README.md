@@ -24,6 +24,7 @@ project-standards 是一个 **Claude Code 插件**：说一句"生成项目规�
 
 ### 最新动态
 
+* **[2026.10]** 🧩 UI 规范改为生成 `docs/standards/design.md`（已有 `ui.md` 时沿用原名），由视觉风格、控件组件规格、页面结构、页面逻辑四部分组成；有代码时按组件目录和路由表写出每个组件和页面（0.5.0）
 * **[2026.10]** 🧭 新增技术选型规范和开发流程规范两个 skill；后端规范新增安全一章，补充配置项、健康检查、日志级别、接口文档；质量门禁加入依赖漏洞扫描（0.4.0）
 * **[2026.10]** 🎨 UI 规范改为只生成骨架，主题色等取值写成 `<待补充>` 占位；主题切换、响应式改为默认就有，不再询问（0.3.0）
 * **[2026.10]** 🙋 提问收紧到合计不超过 8 个，汇报里新增"使用的推荐值"一节（0.2.0）
@@ -127,7 +128,7 @@ claude plugin install project-standards@project-standards
 | `backend-standard` | `docs/standards/backend.md`（含安全、配置、健康检查、日志级别、接口文档） | 生成后端规范 |
 | `database-standard` | `docs/standards/database.md` | 生成数据库规范 |
 | `frontend-standard` | `docs/standards/frontend.md` | 生成前端规范 |
-| `ui-standard` | `docs/standards/ui.md`（骨架：原则、主题切换、变量名和占位，取值由团队后续补充） | 生成 UI 规范、设计规范 |
+| `ui-standard` | `docs/standards/design.md`，项目已有 `ui.md` 时沿用原名（视觉风格、控件组件规格、页面结构、页面逻辑；空项目取值写占位，有代码时按主题文件、组件和路由填写） | 生成 UI 规范、设计规范、design.md |
 | `onboarding-doc` | `docs/standards/README.md`（给开发者看：先读什么、本地环境、开发流程、质量门禁） | 生成上手文档 |
 | `claude-md` | 根目录 `CLAUDE.md`（给 AI 看，`@` 引用各规范，不超过 200 行） | 生成 CLAUDE.md |
 
@@ -203,7 +204,7 @@ flowchart TD
 
 - 模型输出存在波动，同一请求多次运行结果可能略有不同，生成后请过目。
 - 空项目生成的规范里，命令和配置文件（如 `pom.xml`、`.golangci.yml`、`package.json` 的 scripts）在项目里还不存在，要按汇报里的"需要新增的配置"建好后才能运行。
-- UI 规范只是骨架：主题色、字号、间距、布局尺寸都是 `<待补充>`，需要团队自己补充。
+- 空项目的 UI 规范只是骨架：主题色、字号、间距、布局尺寸、页面清单都是 `<待补充>`，需要团队自己补充。
 - 默认规则按"后台管理"类 Web 项目整理，面向用户的站点和移动端只会改写布局一章，其他细节需要团队补充。
 - 带插件生成比不带插件多用六到七成的时间和 token，主要花在逐个生成和最后的交叉检查上。
 - 只适用于 Claude Code。

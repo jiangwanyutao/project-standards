@@ -46,6 +46,7 @@ description: 为项目一次生成整套开发规范：技术选型、开发流�
 - 枚举存储方式：`database.md` 的状态字段写法和 `backend.md` 的枚举规则一致。
 - 通用字段名、软删除字段：`database.md` 和 `backend.md` 中出现的地方一致。
 - 质量门禁命令（包括依赖漏洞扫描）：各规范、`README.md`、`CLAUDE.md` 中完全相同。
+- 组件位置和目录名：UI 设计规范（`design.md`，沿用已有 `ui.md` 时是 `ui.md`）第 2、3 部分和 `frontend.md` 目录一章一致。
 - 版本号只出现在 `tech-stack.md`；提交说明格式只出现在 `workflow.md`。
 - `CLAUDE.md` 的 `@` 引用覆盖了全部生成的规范文件。
 
