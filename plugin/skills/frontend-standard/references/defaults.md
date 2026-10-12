@@ -22,7 +22,8 @@
 - 包管理（空项目推荐 pnpm）；Windows 上用 pnpm 时推荐 `.npmrc` 里 `node-linker=hoisted`，避免符号链接目录读取失败。
 - 样式方案（空项目推荐 Tailwind CSS）；组件库（React 推荐 shadcn/ui，Vue 推荐 Element Plus 或 shadcn-vue，看用户偏好）；图标库（跟组件库配套，例如 Element Plus 用 `@element-plus/icons-vue`）。
 - 路由和服务端状态：React 用 React Router + TanStack Query；Vue 用 Vue Router + TanStack Query（`@tanstack/vue-query`）。代码里已经用 Pinia/Redux 存服务端数据的，沿用并问用户是否以后改用 TanStack Query。
-- ESLint 插件：React 用 `@typescript-eslint`、`eslint-plugin-react-hooks`、`eslint-plugin-jsx-a11y`；Vue 用 `typescript-eslint`、`eslint-plugin-vue`、`eslint-plugin-vuejs-accessibility`。
+- ESLint 插件：React 用 `@typescript-eslint`、`eslint-plugin-react-hooks`、`eslint-plugin-jsx-a11y`，其中 `react-hooks/rules-of-hooks` 和 `react-hooks/exhaustive-deps` 都设为 `error`；Vue 用 `typescript-eslint`、`eslint-plugin-vue`、`eslint-plugin-vuejs-accessibility`。所有项目都开启 `no-console`（`error`）。
+- 类型检查命令：React 用 `tsc --noEmit`（或 `tsc -b --noEmit`）；Vue **必须**用 `vue-tsc --noEmit`，普通 `tsc` 检查不了 `.vue` 文件。
 - 接口类型生成工具（`openapi-typescript`）和命令名（`gen:api`）。
 - 门禁命令按 `package.json` 里真实存在的脚本写；缺的脚本列为"需要新增的配置"。空项目推荐 `pnpm lint && pnpm typecheck && pnpm test --run && pnpm build && pnpm audit --prod --audit-level high`；包管理工具是 npm 或 yarn 时换成 `npm audit --omit=dev --audit-level=high`、`yarn npm audit --environment production --severity high`。
 
@@ -67,6 +68,8 @@ src/
 3. 同一个界面模式在 2 个及以上页面出现时，**必须**提取到 `components/common/`；**禁止**复制粘贴后再小改。
 4. `components/common/` 里的组件需要数据时只能通过 `queries/` 的 hooks 获取，**禁止**直接调用 `api/` 的请求函数。
 5. 只在一个页面里用的组件放在这个页面的 `components/` 下，第二个页面也要用时再提升到 `common/`。
+   - 已有的公共组件不完全满足需要时，先扩展它（加可选 prop 或变体，默认行为不变）；**禁止**另写一个功能相近的组件。
+   - 导出、复制到剪贴板这类全站都会用到的能力，统一封装成一个工具函数或组件，各页面调用它，**禁止**各写一份。
 6. 状态、优先级、类型等枚举值的中文名和颜色，统一在 `lib/enums.ts` 定义一份，由 `StatusBadge` 等组件读取；**禁止**在页面里硬编码枚举值的中文名。
 
 按技术确定：组件库是 npm 包时第 2 条改为"**禁止**修改 `node_modules` 或覆盖组件库内部样式类，定制通过主题变量或外包一层组件完成"。
@@ -102,10 +105,14 @@ src/
 - **必须**：组件不超过 200 行，超过就拆分成子组件或 hook。
 - **禁止**：直接插入 HTML 字符串（`dangerouslySetInnerHTML`），确实需要时先用 DOMPurify 处理。
 - 样式只用项目的样式方案（例如 Tailwind 类名，合并用 `cn()`）；**禁止**写行内 `style`，运行时动态计算的值（坐标、拖拽尺寸）除外。
+- **禁止**：在页面里用选择器覆盖公共组件的样式；需要的样式变化加到公共组件的变体里，所有用到的页面一起生效。
+- **禁止**：在生产代码里留 `console.log`、`console.debug`，由 ESLint 的 `no-console` 拦截。
+- 数据加载用 `Suspense` 时，**必须**在外面包一层错误边界（ErrorBoundary），错误边界显示统一的错误状态组件。
 - TypeScript：
   - **禁止**：`any`，类型未知时用 `unknown` 再收窄；**禁止** `@ts-ignore`、`@ts-nocheck`。`@ts-expect-error` 只允许在测试文件里用，并在同一行写明原因。
   - 类型断言 `as` 和非空断言 `!` 只在加了注释说明理由时使用，其余情况改成运行时检查。
-  - **禁止**：`const enum`、`namespace`。
+  - **禁止**：`const enum`、`namespace`；固定取值的集合用字符串字面量联合类型（`type OrderStatus = 'pending' | 'paid'`），不用 `enum`。
+  - **必须**：模块导出的函数写明参数类型和返回类型；局部变量交给类型推断。
   - 非组件模块（`api/`、`lib/`、`hooks/`、`queries/`）只用具名导出，**禁止** `export default`；**禁止**导出可变绑定（`export let`）。
 - **禁止**：修改或重新赋值函数参数；嵌套三元表达式。
 
@@ -137,7 +144,16 @@ src/
   - 由用户操作引起的逻辑（提交表单、发请求、通知父组件）写在事件处理函数里；只有"组件显示出来就要执行"的代码才放 `useEffect`。
   - **禁止**：多个 `useEffect` 链式触发 `setState`（A 变了改 B，B 变了改 C）。
   - **禁止**：子组件在 `useEffect` 里把数据回传给父组件，数据由父组件获取后往下传。
-- Vue 用 `ref`/`computed`，只在 `setup` 顶层调用 composables；需要全局客户端状态（登录用户、界面偏好）时用 Pinia，Pinia 里**禁止**存放接口列表数据。
+  - **必须**：`useEffect` 里建立的订阅、定时器、事件监听在清理函数里解除；在 `useEffect` 里发的请求用 `AbortController` 取消。
+  - **必须**：新值依赖旧值时用函数式更新（`setCount((c) => c + 1)`）。
+  - **禁止**：在渲染过程中读写 `ref.current`，只在事件处理函数和 `useEffect` 里用。
+  - Context 只放变化不频繁的数据（登录用户、主题、语言）；频繁变化的值放进 Context 会让所有使用方一起重新渲染。
+  - 只有一个调用方的逻辑不抽成自定义 hook，第二个地方也要用时再抽。
+- Vue 用 `ref`/`computed`，只在 `setup` 顶层调用 composables；需要全局客户端状态（登录用户、界面偏好）时用 Pinia，Pinia 里**禁止**存放接口列表数据。Vue 另外遵守：
+  - **必须**：解构 `reactive` 对象用 `toRefs`，解构 Pinia store 用 `storeToRefs`，直接解构会丢失响应性。
+  - **必须**：`@tanstack/vue-query` 的 query key 里放 ref 本身或 getter，**禁止**放 `.value`，否则参数变化后不会重新请求。
+  - `watch` 监听对象的某个属性时传 getter（`watch(() => props.id, ...)`）；`computed` 里**禁止**写副作用（发请求、改其他状态）。
+  - **必须**：在 `onUnmounted` 里解除订阅、定时器和事件监听。
 
 ## 7. 请求层
 
@@ -148,7 +164,9 @@ src/
   - 遇到 401 跳转登录页。
 - token 存放：access token 只存在内存里（`api/client.ts` 模块内的变量），页面刷新后用 refresh token 换取新的 access token；refresh token 在后端下发的 `HttpOnly` Cookie 里，前端读不到也不处理。**禁止**把 token 写进 `localStorage`、`sessionStorage`、URL 或日志。认证方式与后端规范的安全一章一致。
 - 页面和组件**禁止**直接调用 `fetch` 或 axios，只能通过 `queries/` 里的 hooks 获取数据。
-- 错误提示统一交给服务端状态库的全局错误回调，用 toast 显示 `message`；页面只处理需要特殊交互的错误码（例如状态冲突时刷新详情）。
+- 错误提示统一交给服务端状态库的全局错误回调，用 toast 显示 `message`，错误响应带 `request_id` 时一并显示；页面只处理需要特殊交互的错误码（例如状态冲突时刷新详情）。
+- 会话清理：退出登录、收到 401、切换账号**必须**调用同一个清理函数，清空服务端状态缓存（`queryClient.clear()`）和与用户相关的本地存储，保留主题等外观偏好；旧会话晚到的响应**禁止**写进新会话的缓存。页面和组件**禁止**直接读写认证信息，一律通过请求层提供的函数。
+- 从 URL 参数、`localStorage`、`postMessage` 读到的数据属于外部输入，**必须**先校验结构（用 zod 等 schema 库，或写类型守卫函数）再使用，**禁止**直接 `as` 成目标类型。
 
 按技术确定：底层用 `fetch` 还是 axios（看依赖）；认证方式和 token 存放位置（按后端规范安全一章；后端用服务端会话时改为"会话 Cookie 由后端设置 `HttpOnly`，前端不读写"；代码里已经把 token 存在 `localStorage` 的，列给用户确认是否改）；统一响应结构和成功码按后端规范；toast 组件（组件库自带的 `ElMessage`、shadcn 的 sonner）。
 
@@ -158,5 +176,27 @@ src/
 - 写出测试框架、测试文件位置和命名：测试文件和组件放在一起，命名为 `Xxx.test.tsx`。
 - 重点测这几类：`components/common/` 里的组件、按状态启用或禁用的操作按钮、表单校验、`lib/` 下的工具函数。
 - 写明是否有端到端测试；有的话写出框架、目录和命令，没有的话写"暂无端到端测试"。
+- 测试用户看得到的行为，不测组件内部状态；**禁止**对组件做快照测试。
+- 异步出现的内容用 `findBy*` 或 `waitFor` 等待，**禁止**用固定时长的 `setTimeout` 等待。
+- 端到端测试只清理自己创建的数据（按本次运行生成的名称前缀删除），**禁止**清空整张表。
+- 按框架补充：
+  - React Testing Library：查询优先用 `getByRole`、`getByLabelText`，其次 `getByText`，`getByTestId` 最后用；模拟用户操作用 `@testing-library/user-event`；接口用 MSW 在网络层 mock。
+  - Vue：用到 Pinia 的组件用 `createTestingPinia({ createSpy: vi.fn })`；用到生命周期或 `inject` 的 composable 放进一个测试用的宿主组件里测。
 
-按技术确定：React 用 Vitest + Testing Library；Vue 用 Vitest + `@vue/test-utils` 或 `@testing-library/vue`；端到端测试用 Playwright，覆盖登录和核心业务流程，不放进合并门禁（空项目直接用这个推荐值）。
+按技术确定：React 用 Vitest + Testing Library；Vue 用 Vitest + `@vue/test-utils` 或 `@testing-library/vue`；端到端测试用 Playwright，覆盖登录和核心业务流程，不放进合并门禁（空项目直接用这个推荐值）。代码里已经统一用 `fireEvent` 或自己封装的请求 mock 时沿用，在汇报里列出和本章写法的差别。
+
+## 9. 安全
+
+前端只负责下面这些，认证、权限的最终校验在后端（见后端规范安全一章）；token 存放见第 7 章，插入 HTML 见第 5 章，本章不重复。
+
+默认规则：
+- **必须**：用户输入或接口返回的 URL 放进 `href`、`src` 前，只允许 `http:`、`https:`、`mailto:` 协议，拦截 `javascript:` 和 `data:`。
+- **必须**：`target="_blank"` 的链接同时写 `rel="noopener noreferrer"`。
+- 以 `VITE_`、`NEXT_PUBLIC_` 开头的环境变量会打包进前端代码，等于公开；**禁止**把密钥、内部地址放进这类变量。
+- **禁止**：生产构建公开 source map（Vite 的 `build.sourcemap` 保持 `false`，或只上传到错误监控平台、不随静态文件发布）。
+- **禁止**：把接口返回或用户输入的对象直接展开合并进配置对象（`{...defaults, ...input}`），先按 schema 取出需要的字段，避免 `__proto__` 等键污染原型。
+- 新增第三方依赖前，确认它在依赖漏洞扫描里没有高危漏洞，并且仍在维护。
+
+按技术确定：
+- Vue：`:style` **禁止**绑定用户输入的字符串；动态组件 `:is` **禁止**接受用户输入；`v-html` 见第 5 章。
+- 框架自带 SSR 时（Next.js、Nuxt），服务端渲染进页面的数据**必须**转义后再写进 `<script>`。

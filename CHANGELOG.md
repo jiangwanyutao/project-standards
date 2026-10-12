@@ -1,5 +1,45 @@
 # 改动说明
 
+## 0.6.0
+
+### 前端规范
+
+- 新增第 9 章"安全"：链接协议白名单、`target="_blank"` 加 `noopener noreferrer`、`VITE_*` 变量视为公开、生产环境不公开 source map、外部对象不直接展开合并、新增依赖前确认漏洞和维护状态；Vue 的 `:style`、`:is` 不接受用户输入。
+- 第 1 章：`react-hooks/exhaustive-deps` 设为 `error`，开启 `no-console`；Vue 项目类型检查用 `vue-tsc`。
+- 第 3 章：已有公共组件不够用时先扩展；导出、复制这类全站能力统一封装。
+- 第 5 章：禁止在页面里覆盖公共组件样式；禁止留 `console.log`；`Suspense` 外面包错误边界；用字符串字面量联合类型代替 `enum`；导出的函数写明参数和返回类型。
+- 第 6 章：React 的清理函数、`AbortController`、函数式更新、渲染中不读写 `ref.current`、Context 只放低频数据；Vue 的 `toRefs`/`storeToRefs`、vue-query 的 key 不放 `.value`、`watch` 传 getter、`computed` 无副作用。
+- 第 7 章：退出、401、切换账号共用一个会话清理函数；URL 参数、`localStorage`、`postMessage` 的数据先校验结构再用。
+- 第 8 章：不做快照测试；异步内容用 `findBy*` 等待；端到端测试只清理自己创建的数据；React Testing Library 的查询优先级、`user-event`、MSW；Vue 的 `createTestingPinia`。
+
+### 后端规范
+
+- 第 1 章：语言有通行的源码静态安全扫描工具时加进门禁（Python `bandit`、Go `gosec`），放在依赖漏洞扫描前面。
+- 第 4 章：日志和操作日志的脱敏范围；Java 构造器注入、DTO 用 `record`、集合防御性复制、`Optional` 的用法；Go 外部调用带超时的 `context`、接口定义在使用方；FastAPI 通过 `Depends` 获取会话和客户端、声明 `response_model`、校验写在 Pydantic 字段上、异步路由禁止阻塞调用。
+- 第 5 章：导出复用列表的查询条件和数据权限；下拉选项走专门的 options 接口。
+- 第 7 章：FastAPI 测试结束清空 `dependency_overrides`；Go 测试带 `-race`。
+- 第 8 章：写操作多的接口限流；JWT 校验算法、过期时间、`iss`、`aud`；签名密钥至少 32 字节；权限码格式 `<模块>:<资源>:<动作>`；只算启用的角色，停用用户立即拒绝；`.gitignore` 加上私钥、证书和备份文件；静态安全扫描的误报处理。
+
+### 其他规范
+
+- 后端规范第 6 章：错误响应额外带 `request_id`，与响应头 `X-Request-ID` 相同；前端规范第 7 章：错误提示里一并显示请求 ID。
+- 技术选型规范：用户指定或代码里在用的版本已经停止安全更新时，在汇报里单独提醒并建议升级。
+- UI 规范 1.1 第 8 条：编号、权限码、提交号、代码路径用等宽字体，作为"全站一种字体"的例外。
+- 数据库规范：MySQL 时区通过连接属性固定、不改实例全局时区；相对时间的边界用数据库时钟；删库重建类操作先核对、备份、得到同意。
+- UI 规范：新增 1.1 第 13 条"文案只写业务含义"、1.7 动效、多层浮层规则、表格操作列固定在右侧、列表页默认能力、环比为 0 时的显示、4.3 新页面验收。
+- 开发流程规范：合并请求写出没有验证到的部分；涉及认证、权限、支付、上传、加密的改动按安全一章逐条评审；改公共组件时写出检查过的调用方。
+- CLAUDE.md 模板新增三条工作约定：改表前先读真实表结构；删库类操作先核对、备份、得到同意；只在用户明确要求时部署。
+- 上手文档模板新增"常见改动要同步修改的位置"表，常见问题改为"现象 → 先看哪个文件 → 处理办法"。
+
+### 规则来源
+
+来源只记在这里，不写进生成的规范文档。
+
+| 规则 | 来源 |
+|---|---|
+| 错误响应带请求 ID、技术标识用等宽字体、列表页默认能力、导出口径、公共组件先扩展、页面不覆盖公共样式、动效、多层浮层、文案、操作列固定、环比、新页面验收、会话清理、options 接口、权限码格式、停用角色和用户、操作日志脱敏、密钥长度、MySQL 时区属性、数据库时钟、删库确认、`.gitignore` 范围、端到端测试数据清理、改动影响表、改表前读表结构、部署前确认、验证记录写未验证部分 | https://github.com/jiangwanyutao/scaffold-master （`AGENTS.md`、`DESIGN.md`、`PROJECT_MAP.md`、`README.md`、`docs/`） |
+| FastAPI、Python、TypeScript、React、Vue、Java、Go 的编码、测试、安全规则，静态安全扫描，安全专项评审 | https://github.com/affaan-m/ECC `rules/`（main 分支 `b92f181`，2.2.3）。Copyright (c) 2026 Affaan Mustafa，MIT License。规则按本插件的格式改写成中文 |
+
 ## 0.5.0
 
 - `ui-standard` 的输出文件从 `docs/standards/ui.md` 改为 `docs/standards/design.md`；目标项目已有 `ui.md` 时沿用原名，按已有文件的流程合并。标题固定为 `# UI 设计规范`，不写版本号（共用步骤里"版本写进标题"一条只适用于后端、数据库、前端规范）。章节改为四部分：

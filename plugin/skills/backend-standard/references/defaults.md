@@ -13,11 +13,11 @@
 - 选一份语言公认的风格指南做基线，写明"本文没有写到的，一律以基线为准"，并附官方链接。
   - Python：PEP 8 + PEP 484 类型注解；Java：Google Java Style Guide；Go：Effective Go + `gofmt`；TypeScript/Node.js：TypeScript 官方手册 + 项目 ESLint 配置；C#：.NET 官方编码约定。
 - 格式化、lint、类型检查、测试覆盖率、依赖漏洞扫描各由一个工具强制执行，写出工具名和关键配置（例如行宽）。
-- 写出一条质量门禁命令，合并前必须在本地跑通，任何一项失败就不允许合并。门禁的最后一项是依赖漏洞扫描，发现已知漏洞时失败；工具能按严重程度过滤的，只在高危及以上时失败。
+- 写出一条质量门禁命令，合并前必须在本地跑通，任何一项失败就不允许合并。门禁的最后一项是依赖漏洞扫描，发现已知漏洞时失败；工具能按严重程度过滤的，只在高危及以上时失败。语言有通行的源码静态安全扫描工具时，放在依赖漏洞扫描前面一项。
 - 依赖用固定的一种工具管理，锁文件必须提交；**禁止**用其他方式安装项目依赖。
 - 语言和框架的版本只写在技术选型规范里，本文写"版本见技术选型规范"，不重复写版本号。
 
-按技术确定：格式化工具（Java：Spotless + google-java-format；Go：gofmt/goimports；Python：ruff format）、lint 工具（Java：Checkstyle 或 PMD；Go：golangci-lint；Python：ruff check）、类型检查（Python：mypy --strict；TS：tsc --noEmit）、行宽（100）、依赖管理工具（Java：Maven 或 Gradle，看已有文件；Python：uv；Node.js：pnpm）、依赖漏洞扫描（Java：OWASP Dependency-Check 的 Maven 或 Gradle 插件，`failBuildOnCVSS` 设为 7；Go：`govulncheck ./...`；Python：`pip-audit`，用 uv 时作为开发依赖、执行 `uv run pip-audit`；Node.js：`pnpm audit --prod --audit-level high`）、门禁命令。
+按技术确定：格式化工具（Java：Spotless + google-java-format；Go：gofmt/goimports；Python：ruff format）、lint 工具（Java：Checkstyle 或 PMD；Go：golangci-lint；Python：ruff check）、类型检查（Python：mypy --strict；TS：tsc --noEmit）、行宽（100）、依赖管理工具（Java：Maven 或 Gradle，看已有文件；Python：uv；Node.js：pnpm）、依赖漏洞扫描（Java：OWASP Dependency-Check 的 Maven 或 Gradle 插件，`failBuildOnCVSS` 设为 7；Go：`govulncheck ./...`；Python：`pip-audit`，用 uv 时作为开发依赖、执行 `uv run pip-audit`；Node.js：`pnpm audit --prod --audit-level high`）、源码静态安全扫描（Python：`bandit -r app -ll`，只在中危及以上时失败，用 uv 时作为开发依赖、执行 `uv run bandit -r app -ll`；Go：`gosec ./...`；其他语言没有通行工具的不写）、门禁命令。
 
 ## 2. 命名
 
@@ -57,7 +57,8 @@
   - **必须**：新增配置项时同时写进 `.env.example`，每项上面一行注释写明用途；密码、密钥类的值留空。
   - **必须**：启动时校验必填配置，缺少或格式不对时打印缺少的配置项名并退出，**禁止**用默认值继续运行。密码、密钥类配置**禁止**有默认值。
 - 健康检查：**必须**提供 `GET /health`，不需要认证、不加接口版本前缀，能正常处理请求并且数据库连得上时返回 200，否则返回 503；供部署平台和负载均衡探测，响应里**禁止**包含版本号、配置等内部信息。
-- **必须**：日志用统一的日志库，输出结构化字段；**禁止**用打印语句代替日志（命令行工具的输出除外）；**禁止**在日志里写密码、token、API Key。
+- **必须**：日志用统一的日志库，输出结构化字段；**禁止**用打印语句代替日志（命令行工具的输出除外）；**禁止**在日志里写密码、token、API Key、Cookie 和 `Authorization` 请求头。
+- **必须**：操作日志存进数据库的请求参数，密码、token、密钥类字段先脱敏再存。
 - 日志级别：
   - `error`：需要有人处理的失败，例如未预期的异常、外部服务重试后仍然失败、后台任务最终失败。带上请求 ID 和异常堆栈。
   - `warn`：没有造成失败、但需要关注的情况，例如外部服务调用重试、触发限流、登录连续失败。
@@ -79,17 +80,27 @@
   - **必须**：包装类型（`Integer`、`Long` 等）用 `equals` 比较，**禁止**用 `==`；**禁止**把 `SimpleDateFormat` 定义成 static 变量，日期格式化用 `DateTimeFormatter`。
   - **禁止**：在 foreach 循环里增删集合元素（用 `Iterator.remove` 或 `removeIf`）；**禁止**对 `Arrays.asList` 返回的列表调用 `add`、`remove`、`clear`。
   - **必须**：每个 `switch` 穷举全部情况或带 `default`；能加 `@Override` 的方法都加；**禁止**通配符 import（`import java.util.*`）。
+  - **必须**：依赖用构造器注入，字段声明为 `final`；**禁止**在字段上用 `@Autowired` 注入。
+  - **必须**：DTO 用 `record`；对外返回内部集合时返回副本（`List.copyOf`），**禁止**把可修改的内部集合直接交给调用方。
+  - **禁止**：`Optional` 用作字段或方法参数，它只用作查询方法的返回值；**禁止**不判断就调用 `Optional.get()`，用 `orElseThrow`。
 - **Go**：
   - **禁止**：用 `panic` 处理普通错误；`os.Exit` 和 `log.Fatal*` 只允许出现在 `main()` 里。
   - **必须**：同一个错误只处理一次，记日志和向上返回二选一；向上返回时用 `fmt.Errorf("...: %w", err)` 包装。
   - **必须**：类型断言用 comma ok 写法：`v, ok := x.(T)`。
   - **必须**：每个 goroutine 都有明确的退出方式（`context` 取消或关闭 channel），并且能等待它结束；**禁止**使用 `init()`；**禁止**修改包级可变变量，依赖通过构造函数注入。
   - **必须**：接口响应里的切片在序列化前初始化为空切片（`make([]T, 0)`），nil 切片会被 `encoding/json` 输出成 `null`。
+  - **必须**：调用数据库、HTTP 等外部服务时传入带超时的 `context`（`context.WithTimeout`），**禁止**用 `context.Background()` 发起没有超时的外部调用。
+  - 接口定义在使用它的包里，只包含使用方需要的方法（通常 1 到 3 个）；函数参数用接口，返回具体类型。
 - **Python**：
   - **禁止**：可变对象作为参数默认值；裸 `except:` 和 `except Exception:`（最外层的异常处理器除外，且必须记录日志或重新抛出）；用 `assert` 校验参数。
   - **必须**：`try` 块只包住可能抛出该异常的那几行。
   - **必须**：logging 调用的第一个参数是带 `%s` 占位符的字符串字面量，**禁止**用 f-string 拼接日志消息。
   - **必须**：文件、连接等资源用 `with` 或 `async with` 管理。
+  - FastAPI 项目另外遵守：
+    - **禁止**：在路由函数里创建数据库会话（`SessionLocal()`）或长期使用的 HTTP 客户端，一律通过 `Depends` 注入。
+    - **必须**：返回数据的路由声明 `response_model`，响应只包含响应模型里的字段。
+    - **必须**：长度、范围、格式这类能用 Pydantic 字段约束（`Field(min_length=..., ge=...)`、`EmailStr`）表达的校验写在模型上，**禁止**在路由或 service 里手写。
+    - **禁止**：在 `async def` 路由里调用 `requests`、同步的数据库驱动或 `time.sleep`。
 - **Node.js**：
   - **必须**：async 函数里返回 Promise 时写 `return await`，保留完整的错误调用栈。
   - **必须**：进程注册 `unhandledRejection` 和 `uncaughtException` 处理，记录日志后退出进程，由进程管理器重启。
@@ -127,6 +138,8 @@
 - **禁止**：任何查询接口返回密码、密钥、token 等机密字段，响应模型里不定义这些字段。
 - 创建订单、支付等重复提交会造成损失的接口，支持 `Idempotency-Key` 请求头：同一个键 24 小时内重复请求时，直接返回第一次的响应，不再执行。
 - 每个请求都有请求 ID：请求头带了 `X-Request-ID` 就沿用，没带就生成一个；写进响应头和这次请求的所有日志。
+- 导出（项目有导出功能时才写）：**必须**复用对应列表接口的查询条件和数据权限，列表、统计、导出三者的筛选口径一致；**禁止**导出接口另写一套查询而绕过数据权限。
+- 下拉选项：表单里下拉要用的引用数据（用户、角色、部门等）走专门的 `GET /<资源>/options` 接口，只返回显示需要的字段（ID 和名称），要求的权限是使用这个表单的权限；**禁止**为了显示一个下拉框而要求调用方拥有该资源的管理权限。
 - 接口文档：
   - **必须**：后端由代码生成 OpenAPI 文档（框架支持时用 OpenAPI 3），写明文档地址和接口调试页面的地址；前端的接口类型（`gen:api`）从这个地址生成，**禁止**另外手写一份接口文档。
   - **必须**：每个接口写明用途（一句话）、可能返回的业务错误码；列表接口写明默认排序。
@@ -138,7 +151,7 @@
 ## 6. 统一响应
 
 默认规则：
-- 所有接口的响应体都是 `{code, message, data}`，出错时额外带 `detail`。`code` 为 0 表示成功。
+- 所有接口的响应体都是 `{code, message, data}`，出错时额外带 `detail` 和 `request_id`（与响应头 `X-Request-ID` 相同，前端在错误提示里显示，方便用户报告问题）。`code` 为 0 表示成功。
 - HTTP 状态码按语义返回，**禁止**所有情况都返回 200。
 - 成功响应统一由两个辅助函数封装（普通结果、分页结果），写出它们所在的文件。
 - 错误由全局异常处理器统一输出，接口层**禁止**自己拼装错误响应。业务代码抛出业务异常（携带错误码和 `detail`），由异常处理器映射成 HTTP 状态码。
@@ -169,6 +182,9 @@
 - 每条用例按"准备 → 执行 → 断言"三段组织，只验证一个行为。
 - 单元测试不连数据库；集成测试连独立的测试库，通过 HTTP 客户端调用接口。写出两类测试的目录。
 - 覆盖率不低于 80%。状态机、防重复、权限校验这类逻辑必须有测试。
+- 按语言补充：
+  - FastAPI：替换依赖时覆盖路由里 `Depends` 实际引用的那个函数；**必须**在测试结束时清空 `app.dependency_overrides`，避免影响其他用例。
+  - Go：测试命令**必须**带 `-race`。
 
 按技术确定：测试框架（Java：JUnit 5 + Mockito + Testcontainers；Go：testing + testify；Python：pytest + httpx；Node.js：Vitest 或 Jest）、覆盖率工具（JaCoCo、`go test -cover`、pytest-cov）、测试库名（见数据库规范的库名规则）、Java 方法名风格（`cancelOrder_rejectsPaidOrder` 或 `@DisplayName`，代码里已有的沿用）。
 
@@ -180,18 +196,23 @@
 - 认证：
   - access token 有效期不超过 2 小时；需要保持登录时用 refresh token，有效期不超过 7 天，由后端以 `HttpOnly`、`Secure`、`SameSite=Strict` 的 Cookie 下发。
   - **必须**：退出登录、修改密码、管理员禁用账号后，该用户已签发的 refresh token 全部作废。
-  - 登录接口按账号和来源 IP 限流，连续失败 5 次后锁定 15 分钟，返回 10006。
+  - 登录接口按账号和来源 IP 限流，连续失败 5 次后锁定 15 分钟，返回 10006。发短信、发邮件、批量导入这类写操作多或成本高的接口也要限流。
+  - **必须**：校验 JWT 时检查签名算法（只接受配置的算法，拒绝 `none`）、过期时间、签发方 `iss` 和受众 `aud`。
+  - **必须**：JWT 签名密钥按 UTF-8 编码不少于 32 字节，启动时检查，不满足就退出。
 - 密码存储：**必须**用 Argon2id 或 bcrypt 哈希后存储；**禁止**明文存储、可逆加密，以及直接用 MD5、SHA-1、SHA-256 计算哈希。
 - 权限校验：
   - **必须**：在接口层统一校验（拦截器、中间件或依赖注入），每个接口声明它需要的权限；没有声明的接口默认拒绝访问，公开接口显式标注。
   - **禁止**：只靠前端隐藏按钮或菜单控制权限。
+  - 权限码格式统一为 `<模块>:<资源>:<动作>`，例如 `order:refund:create`；前端控制按钮显示和后端校验用同一个权限码。
+  - **必须**：计算用户权限时只算启用且未删除的角色；用户被停用后，每次请求都拒绝，不等 token 过期。
   - 按记录归属控制的数据（例如只能看自己的订单），在业务层查询时加上归属条件，**禁止**先查出来再在接口层过滤。
 - CORS：只允许配置项里列出的来源；**禁止**在允许携带凭证（Cookie）时把来源设为 `*`，生产环境**禁止**使用 `*`。
 - 文件上传（项目有上传功能时才写）：
   - **必须**：限制单个文件大小，按扩展名白名单校验，同时检查文件内容的类型和扩展名一致。
   - **必须**：存储用的文件名由服务端生成，**禁止**用用户上传的文件名拼接存储路径。
 - 依赖漏洞：质量门禁里的漏洞扫描报出漏洞时，先升级到修复版本；暂时没有修复版本的，在扫描工具的忽略配置里登记漏洞编号、原因和复查日期。
-- 机密信息：**禁止**把密码、密钥、token 提交进仓库，`.env` 加入 `.gitignore`；不小心提交过的，立即更换该密钥，只删提交不算处理完。
+- 机密信息：**禁止**把密码、密钥、token 提交进仓库。`.gitignore` 里加上 `.env`（保留 `.env.example`）、私钥和证书（`*.pem`、`*.key`、`*.p12`、`*.jks`）、数据库备份和本地数据库文件（`*.bak`、`*.dump`、`*.sqlite`）。不小心提交过的，立即更换该密钥，只删提交不算处理完。
+- 源码静态安全扫描（第 1 章门禁里有这一项时写）：扫描报出的问题按处理依赖漏洞的方式处理，确认是误报的，在代码行上用工具的忽略注释（`# nosec B<编号>`）并写明原因。
 
 按技术确定：认证方式（空项目推荐上面的 access token + refresh token；代码里已经用服务端会话的沿用会话，改写成会话过期和退出登录作废会话的规则）、密码哈希库（Spring Security 的 `Argon2PasswordEncoder` 或 `BCryptPasswordEncoder`；Python 的 `argon2-cffi` 或 `pwdlib`；Go 的 `golang.org/x/crypto/argon2` 或 `bcrypt`；Node.js 的 `argon2`）、权限校验的实现方式（Spring：`@PreAuthorize`；FastAPI：`Depends`；Gin：中间件）、漏洞扫描工具的忽略配置（Dependency-Check 用 suppression 文件，`pip-audit` 用 `--ignore-vuln`，`pnpm audit` 用 `package.json` 的 `pnpm.auditConfig.ignoreCves`；`govulncheck` 没有忽略配置，改为在本章用表格登记漏洞编号、原因和复查日期）。
 
@@ -209,8 +230,9 @@
   - `ruff check` 和 `ruff format` 负责风格与 lint，行宽 100。
   - `mypy --strict` 负责类型检查。
   - `pytest --cov` 负责测试和覆盖率。
+  - `bandit` 负责源码静态安全扫描，发现中危及以上问题时失败。
   - `pip-audit` 负责依赖漏洞扫描，发现已知漏洞时失败。
-  - 合并前必须在 `backend/` 下本地跑通质量门禁：`uv run ruff format --check . && uv run ruff check . && uv run mypy app tests && uv run pytest --cov && uv run pip-audit`，任何一项失败就不允许合并。
+  - 合并前必须在 `backend/` 下本地跑通质量门禁：`uv run ruff format --check . && uv run ruff check . && uv run mypy app tests && uv run pytest --cov && uv run bandit -r app -ll && uv run pip-audit`，任何一项失败就不允许合并。
 - 依赖用 uv 管理：`uv add` / `uv sync`，锁文件 `uv.lock` 必须提交。**禁止**使用 `pip install` 装项目依赖。
 
 ## 2. 命名

@@ -51,7 +51,7 @@
 - `_rel` 关系表只需要 `create_by`、`create_time`，解除关系时直接物理删除。
 - **禁止**：业务表执行物理删除。删除一律把 `del_flag` 置为 1，查询默认带 `del_flag = 0` 条件。
 
-按技术确定：时间类型（PostgreSQL `TIMESTAMPTZ`；MySQL 没有带时区的时间类型，用 `DATETIME(3)` 统一存 UTC，并在连接参数里固定时区；SQL Server `DATETIMEOFFSET`）；ORM 的自动填充写法（MyBatis-Plus `MetaObjectHandler`、JPA `@CreatedDate`）和逻辑删除配置（MyBatis-Plus `@TableLogic`）。代码里已有统一的通用字段名（如 `created_at`、`deleted`）时沿用。
+按技术确定：时间类型（PostgreSQL `TIMESTAMPTZ`；MySQL 没有带时区的时间类型，用 `DATETIME(3)` 统一存 UTC，会话时区通过驱动的连接属性固定（MySQL Connector/J 用 `connectionTimeZone=UTC` 加 `forceConnectionTimeZoneToSession=true`，连接池里作为独立属性配置；时区写成 `+08:00` 这类带加号的值时**禁止**写进 URL，`+` 会被解码成空格），**禁止**为此修改数据库实例的全局时区；SQL Server `DATETIMEOFFSET`）；ORM 的自动填充写法（MyBatis-Plus `MetaObjectHandler`、JPA `@CreatedDate`）和逻辑删除配置（MyBatis-Plus `@TableLogic`）。代码里已有统一的通用字段名（如 `created_at`、`deleted`）时沿用。
 
 ## 4. 字段类型
 
@@ -127,6 +127,7 @@
 - **禁止**：页面搜索用左模糊或全模糊（`LIKE '%x'`、`LIKE '%x%'`），需要时用全文检索或搜索引擎。
 - **禁止**：`NOT IN (子查询)`，改用 `NOT EXISTS`。
 - **禁止**：时间范围查询用 `BETWEEN`，写成 `col >= 起点 AND col < 终点`；整数和日期字段可以用 `BETWEEN`。
+- **必须**："今天""最近 7 天"这类相对时间的边界在 SQL 里用数据库时钟（`now()`）计算，**禁止**用应用服务器的当前时间拼进查询，避免两边时钟或时区不一致造成偏差。
 - `IN` 列表的元素不超过 1000 个；统计行数用 `count(*)`，**禁止**用 `count(列名)` 或 `count(1)` 代替；涉及多张表的 SQL，每个列名都带表别名。
 - **禁止**：存储过程；业务代码里执行 `TRUNCATE`。
 - 批量更新或删除按有索引、值唯一的字段（一般是主键）分批执行，推荐每批 1000 行；循环中**禁止**修改 `ORDER BY` 用到的字段。
@@ -186,5 +187,6 @@
 - **存放位置**：写明备份目录；备份和数据库在同一台机器同一块盘上时，在规范里明确标出这是风险，并写出异地存放的待办。
 - **恢复演练**：修改备份脚本后、上线前，都要完整演练一次"备份 → 删库 → 恢复 → 校验行数"，在本节记录日期、环境、步骤和结果。
 - **恢复步骤**：按顺序写出停服务、重建库、恢复、校验（迁移版本和各表行数）、启动服务的命令。
+- **删库重建类操作**：删库、重建库、清空表、执行恢复之前，**必须**核对目标库名和环境，先做一次 `manual` 备份，并得到负责人的明确同意。
 
 按技术确定：备份命令（PostgreSQL `pg_dump -Fc` / `pg_restore`；MySQL `mysqldump --single-transaction` 或 `mysqlsh dump-instance`；SQL Server `BACKUP DATABASE`）；执行方式（定时任务、容器、云数据库自带的备份）。用的是云数据库自带备份时，本节改为写清楚云上的备份策略和恢复流程。
